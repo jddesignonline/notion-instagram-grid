@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>grid</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #fff; font-family: sans-serif; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    .cell { aspect-ratio: 1; background: #f0f0f0; overflow: hidden; cursor: pointer; position: relative; }
+    .cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cell:hover .label { opacity: 1; }
+    .label { position: absolute; inset: 0; background: rgba(0,0,0,0.4); color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px; opacity: 0; transition: opacity 0.2s; }
+    .error { padding: 2rem; color: red; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="grid" id="grid">loading...</div>
+  <script>
+    fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
+          return;
+        }
+        document.getElementById('grid').innerHTML = data.posts.map(p =>
+          '<div class="cell" onclick="window.open(\'https://notion.so/' + p.id.replace(/-/g,'') + '\',\'_blank\')">' +
+          (p.img ? '<img src="' + p.img + '" alt="' + p.name + '" />' : '') +
+          '<div class="label">' + p.name + '</div>' +
+          '</div>'
+        ).join('');
+      })
+      .catch(e => {
+        document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
+      });
+  </script>
+</body>
+</html>
