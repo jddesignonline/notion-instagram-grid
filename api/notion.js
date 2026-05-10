@@ -16,7 +16,10 @@ export default async function handler(req) {
       'Notion-Version': '2022-06-28',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ page_size: 30 })
+    body: JSON.stringify({
+      page_size: 30,
+      sorts: [{ property: 'publish date', direction: 'descending' }]
+    })
   });
 
   const data = await res.json();
