@@ -217,4 +217,76 @@
 
       document.getElementById('lightbox-name').textContent = p.name || '';
       document.getElementById('lightbox-date').textContent = formatDate(p.date);
-      document.getElementById('lightbox-notion').href = 'https://notion.so
+      document.getElementById('lightbox-notion').href = 'https://notion.so/' + p.id.replace(/-/g, '');
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox(e) {
+      if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
+        document.getElementById('lightbox').classList.remove('open');
+      }
+    }
+
+    function renderPosts(posts) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      posts.forEach(p => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.onclick = () => openLightbox(p);
+
+        if (p.img) {
+          const img = document.createElement('img');
+          img.src = p.img;
+          img.alt = '';
+          cell.appendChild(img);
+        }
+
+        if (p.pinned || p.format === 'carousel') {
+          const badge = document.createElement('div');
+          badge.className = 'badge';
+          badge.innerHTML = p.pinned ? pinSVG() : carouselSVG();
+          cell.appendChild(badge);
+        }
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'label-date';
+        dateEl.textContent = formatDate(p.date);
+        cell.appendChild(dateEl);
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'label-name';
+        nameEl.textContent = p.name;
+        cell.appendChild(nameEl);
+
+        grid.appendChild(cell);
+      });
+    }
+
+    function loadGrid() {
+      const btn = document.getElementById('btn');
+      btn.textContent = 'loading...';
+      btn.disabled = true;
+      document.getElementById('grid').innerHTML = '<div class="loading">loading...</div>';
+      fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        .then(r => r.json())
+        .then(data => {
+          btn.textContent = 'refresh';
+          btn.disabled = false;
+          if (data.error) {
+            document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
+            return;
+          }
+          allPosts = data.posts;
+          renderPosts(allPosts);
+        })
+        .catch(e => {
+          btn.textContent = 'refresh';
+          btn.disabled = false;
+          document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
+        });
+    }
+    loadGrid();
+  </script>
+</body>
+</html>
