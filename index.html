@@ -34,6 +34,40 @@
       if (!d) return '';
       return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' });
     }
+
+    function renderPosts(posts) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      posts.forEach(p => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.onclick = () => window.open('https://notion.so/' + p.id.replace(/-/g, ''), '_blank');
+
+        if (p.img) {
+          const img = document.createElement('img');
+          img.src = p.img;
+          img.alt = p.name;
+          cell.appendChild(img);
+        }
+
+        const label = document.createElement('div');
+        label.className = 'label';
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'label-date';
+        dateEl.textContent = formatDate(p.date);
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'label-name';
+        nameEl.textContent = p.name;
+
+        label.appendChild(dateEl);
+        label.appendChild(nameEl);
+        cell.appendChild(label);
+        grid.appendChild(cell);
+      });
+    }
+
     function loadGrid() {
       const btn = document.getElementById('btn');
       btn.textContent = 'loading...';
@@ -48,15 +82,7 @@
             document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
             return;
           }
-          document.getElementById('grid').innerHTML = data.posts.map(p =>
-            '<div class="cell" onclick="window.open(\'https://notion.so/' + p.id.replace(/-/g,'') + '\',\'_blank\')">' +
-            (p.img ? '<img src="' + p.img + '" alt="' + p.name + '" />' : '') +
-            '<div class="label">' +
-            '<div class="label-date">' + formatDate(p.date) + '</div>' +
-            '<div class="label-name">' + p.name + '</div>' +
-            '</div>' +
-            '</div>'
-          ).join('');
+          renderPosts(data.posts);
         })
         .catch(e => {
           btn.innerHTML = '↻ refresh';
