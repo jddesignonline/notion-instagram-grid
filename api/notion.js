@@ -54,7 +54,7 @@ export default async function handler(req) {
     const files = props['attachment']?.files || [];
     const allImgs = files.map(f => f.type === 'external' ? f.external?.url : f.file?.url).filter(Boolean);
     const linkUrl = props['link']?.url || props['link']?.rich_text?.[0]?.plain_text || null;
-    const format = (props['format']?.select?.name || '').toLowerCase();
+    const format: allImgs.length > 1 ? 'carousel' : '',
 
     const img = allImgs[0] || linkUrl || null;
     const imgs = allImgs.length ? allImgs : (linkUrl ? [linkUrl] : []);
