@@ -160,25 +160,31 @@
 
         cell.ondragleave = () => cell.classList.remove('drag-over');
 
-        cell.ondrop = e => {
-          e.preventDefault();
-          cell.classList.remove('drag-over');
-          if (dragSrcIdx === null || dragSrcIdx === i) return;
+       cell.ondrop = e => {
+  e.preventDefault();
+  cell.classList.remove('drag-over');
+  if (dragSrcIdx === null || dragSrcIdx === i) return;
 
-          // swap posts
-          const tmp = allPosts[dragSrcIdx];
-          allPosts[dragSrcIdx] = allPosts[i];
-          allPosts[i] = tmp;
+  const from = dragSrcIdx;
+  const to = i;
 
-          // swap slot dates to match new positions
-          const tmpDate = allPosts[dragSrcIdx]._slotDate;
-          allPosts[dragSrcIdx]._slotDate = allPosts[i]._slotDate;
-          allPosts[i]._slotDate = tmpDate;
+  // capture slot dates before swap
+  const fromDate = allPosts[from]._slotDate;
+  const toDate = allPosts[to]._slotDate;
 
-          dragSrcIdx = null;
-          renderPosts(allPosts);
-          enableDrag();
-        };
+  // swap posts
+  const tmp = allPosts[from];
+  allPosts[from] = allPosts[to];
+  allPosts[to] = tmp;
+
+  // now apply dates to correct positions
+  allPosts[from]._slotDate = fromDate;
+  allPosts[to]._slotDate = toDate;
+
+  dragSrcIdx = null;
+  renderPosts(allPosts);
+  enableDrag();
+};
       });
     }
 
