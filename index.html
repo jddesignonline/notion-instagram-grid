@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>grid</title>
+  <title>jddesignonline grid planner</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #fff; font-family: sans-serif; }
@@ -95,6 +95,7 @@
     let allPosts = [];
     let originalPosts = [];
     let dragSrcIdx = null;
+    let movedIndices = new Set();
 
     function formatDate(d) {
       if (!d) return '';
@@ -129,6 +130,7 @@
 
     function enterDesignMode() {
       designMode = true;
+      movedIndices = new Set();
       originalPosts = allPosts.map(p => ({ ...p }));
       allPosts.forEach(p => { p._slotDate = p.date; });
       document.getElementById('design-btn').textContent = 'save changes';
@@ -142,6 +144,7 @@
 
     function exitDesignMode() {
       designMode = false;
+      movedIndices = new Set();
       document.getElementById('design-btn').textContent = 'design grid';
       document.getElementById('design-btn').classList.remove('saving');
       document.getElementById('design-btn').removeAttribute('disabled');
@@ -201,13 +204,12 @@
           allPosts[from]._slotDate = fromDate;
           allPosts[to]._slotDate = toDate;
 
+          movedIndices.add(from);
+          movedIndices.add(to);
+
           dragSrcIdx = null;
           renderPosts(allPosts);
           enableDrag();
-
-          const cells = document.querySelectorAll('.cell');
-          cells[from].classList.add('moved');
-          cells[to].classList.add('moved');
         };
       });
     }
@@ -280,9 +282,10 @@
     function renderPosts(posts) {
       const grid = document.getElementById('grid');
       grid.innerHTML = '';
-      posts.forEach(p => {
+      posts.forEach((p, idx) => {
         const cell = document.createElement('div');
         cell.className = 'cell';
+        if (movedIndices.has(idx)) cell.classList.add('moved');
         cell.onclick = () => openLightbox(p);
 
         const isReel = p.format === 'reel';
