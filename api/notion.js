@@ -28,13 +28,24 @@ export default async function handler(req) {
   const posts = data.results.map(page => {
     const props = page.properties;
     const files = props['attachment']?.files || [];
-    const img = files[0]?.file?.url || files[0]?.external?.url || null;
+    const attachmentUrl = files[0]?.file?.url || files[0]?.external?.url || null;
+    const linkUrl = props['link']?.url || props['link']?.rich_text?.[0]?.plain_text || null;
+    const canvaUrl = props['canva link']?.url || props['canva link']?.rich_text?.[0]?.plain_text || null;
+    const imageSource = (props['image source']?.select?.name || '').toLowerCase();
+
+    let img = null;
+    if (imageSource === 'notion') img = attachmentUrl;
+    else if (imageSource === 'link') img = linkUrl;
+    else if (imageSource === 'canva') img = canvaUrl;
+    else img = attachmentUrl || linkUrl || canvaUrl;
+
     return {
       id: page.id,
-      name: props['content']?.title?.[0]?.plain_text || '',
+      name: props['name']?.title?.[0]?.plain_text || '',
       date: props['publish date']?.date?.start || null,
       pinned: props['pinned']?.checkbox === true,
       widget: props['widget']?.checkbox === true,
+      imageSource,
       img
     };
   })
