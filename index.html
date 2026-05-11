@@ -69,145 +69,150 @@
 
   <script>
     let currentImgs = [];
-    let currentIdx = 0;
+let currentIdx = 0;
 
-    function formatDate(d) {
-      if (!d) return '';
-      return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
+function formatDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
+}
+
+function canvaEmbedUrl(url) {
+  if (!url) return '';
+  if (url.includes('?embed')) return url;
+  return url.replace(/\?.*$/, '') + '?embed';
+}
+
+function pinSVG() {
+  return `<svg viewBox="0 0 24 24" fill="#1a1816" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="7" r="5"/>
+    <ellipse cx="12" cy="6" rx="2" ry="1.2" fill="#fff" opacity="0.4"/>
+    <rect x="11" y="12" width="2" height="7" rx="1"/>
+  </svg>`;
+}
+
+function carouselSVG() {
+  return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="3" width="14" height="14" rx="3" stroke="#1a1816" stroke-width="2"/>
+    <path d="M7 19h11a3 3 0 0 0 3-3V8" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function updateSlide() {
+  const img = currentImgs[currentIdx];
+  document.getElementById('lightbox-img').src = img;
+  document.getElementById('lb-prev').classList.toggle('hidden', currentIdx === 0);
+  document.getElementById('lb-next').classList.toggle('hidden', currentIdx === currentImgs.length - 1);
+  document.querySelectorAll('.lightbox-dot').forEach((d, i) => d.classList.toggle('active', i === currentIdx));
+}
+
+function changeSlide(dir) {
+  currentIdx = Math.max(0, Math.min(currentImgs.length - 1, currentIdx + dir));
+  updateSlide();
+}
+
+function openLightbox(p) {
+  const imgEl = document.getElementById('lightbox-img');
+  const canvaEl = document.getElementById('lightbox-canva');
+  const dotsEl = document.getElementById('lb-dots');
+
+  if (p.imageSource === 'canva' && p.img) {
+    imgEl.style.display = 'none';
+    canvaEl.src = canvaEmbedUrl(p.img);
+    canvaEl.style.display = 'block';
+    currentImgs = [];
+    dotsEl.innerHTML = '';
+  } else {
+    canvaEl.style.display = 'none';
+    canvaEl.src = '';
+    imgEl.style.display = 'block';
+    currentImgs = p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
+    currentIdx = 0;
+
+    dotsEl.innerHTML = currentImgs.length > 1
+      ? currentImgs.map((_, i) => `<div class="lightbox-dot${i === 0 ? ' active' : ''}"></div>`).join('')
+      : '';
+
+    updateSlide();
+  }
+
+  document.getElementById('lightbox-name').textContent = p.name || '';
+  document.getElementById('lightbox-date').textContent = formatDate(p.date);
+  document.getElementById('lightbox-notion').href = 'https://notion.so/' + p.id.replace(/-/g, '');
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox(e) {
+  if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
+    document.getElementById('lightbox').classList.remove('open');
+    document.getElementById('lightbox-canva').src = '';
+  }
+}
+
+function renderPosts(posts) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  posts.forEach(p => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.onclick = () => openLightbox(p);
+
+    if (p.imageSource === 'canva' && p.img) {
+      const iframe = document.createElement('iframe');
+      iframe.src = canvaEmbedUrl(p.img);
+      iframe.className = 'cell-canva';
+      iframe.allowFullscreen = true;
+      cell.appendChild(iframe);
+    } else if (p.img) {
+      const img = document.createElement('img');
+      img.src = p.img;
+      img.alt = '';
+      cell.appendChild(img);
     }
 
-    function pinSVG() {
-      return `<svg viewBox="0 0 24 24" fill="#1a1816" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="7" r="5"/>
-        <ellipse cx="12" cy="6" rx="2" ry="1.2" fill="#fff" opacity="0.4"/>
-        <rect x="11" y="12" width="2" height="7" rx="1"/>
-      </svg>`;
+    if (p.pinned || p.format === 'carousel') {
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      badge.innerHTML = p.pinned ? pinSVG() : carouselSVG();
+      cell.appendChild(badge);
     }
 
-    function carouselSVG() {
-      return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="3" y="3" width="14" height="14" rx="3" stroke="#1a1816" stroke-width="2"/>
-        <path d="M7 19h11a3 3 0 0 0 3-3V8" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
-      </svg>`;
-    }
+    const dateEl = document.createElement('div');
+    dateEl.className = 'label-date';
+    dateEl.textContent = formatDate(p.date);
+    cell.appendChild(dateEl);
 
-    function updateSlide() {
-      const img = currentImgs[currentIdx];
-      document.getElementById('lightbox-img').src = img;
-      document.getElementById('lb-prev').classList.toggle('hidden', currentIdx === 0);
-      document.getElementById('lb-next').classList.toggle('hidden', currentIdx === currentImgs.length - 1);
-      document.querySelectorAll('.lightbox-dot').forEach((d, i) => d.classList.toggle('active', i === currentIdx));
-    }
+    const nameEl = document.createElement('div');
+    nameEl.className = 'label-name';
+    nameEl.textContent = p.name;
+    cell.appendChild(nameEl);
 
-    function changeSlide(dir) {
-      currentIdx = Math.max(0, Math.min(currentImgs.length - 1, currentIdx + dir));
-      updateSlide();
-    }
+    grid.appendChild(cell);
+  });
+}
 
-    function openLightbox(p) {
-      const imgEl = document.getElementById('lightbox-img');
-      const canvaEl = document.getElementById('lightbox-canva');
-      const dotsEl = document.getElementById('lb-dots');
-
-      if (p.imageSource === 'canva' && p.img) {
-        imgEl.style.display = 'none';
-        canvaEl.src = p.img;
-        canvaEl.style.display = 'block';
-        currentImgs = [];
-        dotsEl.innerHTML = '';
-      } else {
-        canvaEl.style.display = 'none';
-        canvaEl.src = '';
-        imgEl.style.display = 'block';
-        currentImgs = p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
-        currentIdx = 0;
-
-        dotsEl.innerHTML = currentImgs.length > 1
-          ? currentImgs.map((_, i) => `<div class="lightbox-dot${i === 0 ? ' active' : ''}"></div>`).join('')
-          : '';
-
-        updateSlide();
+function loadGrid() {
+  const btn = document.getElementById('btn');
+  btn.textContent = 'loading...';
+  btn.disabled = true;
+  document.getElementById('grid').innerHTML = '<div class="loading">loading...</div>';
+  fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    .then(r => r.json())
+    .then(data => {
+      btn.textContent = 'refresh';
+      btn.disabled = false;
+      if (data.error) {
+        document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
+        return;
       }
-
-      document.getElementById('lightbox-name').textContent = p.name || '';
-      document.getElementById('lightbox-date').textContent = formatDate(p.date);
-      document.getElementById('lightbox-notion').href = 'https://notion.so/' + p.id.replace(/-/g, '');
-      document.getElementById('lightbox').classList.add('open');
-    }
-
-    function closeLightbox(e) {
-      if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
-        document.getElementById('lightbox').classList.remove('open');
-        document.getElementById('lightbox-canva').src = '';
-      }
-    }
-
-    function renderPosts(posts) {
-      const grid = document.getElementById('grid');
-      grid.innerHTML = '';
-      posts.forEach(p => {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.onclick = () => openLightbox(p);
-
-        if (p.imageSource === 'canva' && p.img) {
-          const iframe = document.createElement('iframe');
-          iframe.src = p.img;
-          iframe.className = 'cell-canva';
-          iframe.allowFullscreen = true;
-          cell.appendChild(iframe);
-        } else if (p.img) {
-          const img = document.createElement('img');
-          img.src = p.img;
-          img.alt = '';
-          cell.appendChild(img);
-        }
-
-        // badge — pin takes priority over carousel
-        if (p.pinned || p.format === 'carousel') {
-          const badge = document.createElement('div');
-          badge.className = 'badge';
-          badge.innerHTML = p.pinned ? pinSVG() : carouselSVG();
-          cell.appendChild(badge);
-        }
-
-        const dateEl = document.createElement('div');
-        dateEl.className = 'label-date';
-        dateEl.textContent = formatDate(p.date);
-        cell.appendChild(dateEl);
-
-        const nameEl = document.createElement('div');
-        nameEl.className = 'label-name';
-        nameEl.textContent = p.name;
-        cell.appendChild(nameEl);
-
-        grid.appendChild(cell);
-      });
-    }
-
-    function loadGrid() {
-      const btn = document.getElementById('btn');
-      btn.textContent = 'loading...';
-      btn.disabled = true;
-      document.getElementById('grid').innerHTML = '<div class="loading">loading...</div>';
-      fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-        .then(r => r.json())
-        .then(data => {
-          btn.textContent = 'refresh';
-          btn.disabled = false;
-          if (data.error) {
-            document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
-            return;
-          }
-          renderPosts(data.posts);
-        })
-        .catch(e => {
-          btn.textContent = 'refresh';
-          btn.disabled = false;
-          document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
-        });
-    }
-    loadGrid();
+      renderPosts(data.posts);
+    })
+    .catch(e => {
+      btn.textContent = 'refresh';
+      btn.disabled = false;
+      document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
+    });
+}
+loadGrid();
   </script>
 </body>
 </html>
