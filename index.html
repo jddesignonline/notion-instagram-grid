@@ -166,26 +166,27 @@
     }
 
     async function saveChanges() {
-      const btn = document.getElementById('design-btn');
-      btn.textContent = 'saving...';
-      btn.disabled = true;
+  const btn = document.getElementById('design-btn');
+  btn.textContent = 'saving...';
+  btn.disabled = true;
 
-      const updates = allPosts.map((p, i) => ({ id: p.id, date: originalDates[i] }));
+  const updates = allPosts.map((p, i) => ({ id: p.id, date: originalDates[i] }));
 
-      try {
-        await fetch('/api/notion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'update-dates', updates })
-        });
-        exitDesignMode();
-        loadGrid();
-      } catch(e) {
-        btn.textContent = 'save changes';
-        btn.disabled = false;
-        alert('save failed — please try again');
-      }
-    }
+  try {
+    await fetch('/api/notion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update-dates', updates })
+    });
+    allPosts.forEach((p, i) => { p.date = originalDates[i]; });
+    exitDesignMode();
+    loadGrid();
+  } catch(e) {
+    btn.textContent = 'save changes';
+    btn.disabled = false;
+    alert('save failed — please try again');
+  }
+}
 
     function updateSlide() {
       const img = currentImgs[currentIdx];
