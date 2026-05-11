@@ -120,14 +120,14 @@
     }
 
     function exitDesignMode() {
-      designMode = false;
-      document.getElementById('design-btn').textContent = 'design grid';
-      document.getElementById('design-btn').classList.remove('saving');
-      document.getElementById('design-btn').disabled = false;
-      document.getElementById('design-banner').classList.remove('visible');
-      document.getElementById('btn').disabled = false;
-      document.getElementById('grid').classList.remove('design-mode');
-    }
+  designMode = false;
+  document.getElementById('design-btn').textContent = 'design grid';
+  document.getElementById('design-btn').classList.remove('saving');
+  document.getElementById('design-btn').removeAttribute('disabled');
+  document.getElementById('design-banner').classList.remove('visible');
+  document.getElementById('btn').removeAttribute('disabled');
+  document.getElementById('grid').classList.remove('design-mode');
+}
 
     function toggleDesignMode() {
   console.log('toggleDesignMode clicked, designMode is:', designMode);
