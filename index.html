@@ -56,17 +56,16 @@
 
   <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
     <button class="lightbox-close" onclick="closeLightbox()">×</button>
-    <div class="lightbox-media">
-      <button class="lightbox-arrow prev hidden" id="lb-prev" onclick="event.stopPropagation();changeSlide(-1)">‹</button>
-      <img class="lightbox-img" id="lightbox-img" src="" alt="" style="display:none;" />
-      <iframe class="lightbox-canva" id="lightbox-canva" src="" style="display:none;" allowfullscreen></iframe>
-      <button class="lightbox-arrow next hidden" id="lb-next" onclick="event.stopPropagation();changeSlide(1)">›</button>
-    </div>
-    <div class="lightbox-dots" id="lb-dots"></div>
-    <div class="lightbox-name" id="lightbox-name"></div>
-    <div class="lightbox-date" id="lightbox-date"></div>
-    <a class="lightbox-notion" id="lightbox-notion" href="" target="_blank">open in notion</a>
-  </div>
+<div class="lightbox-media">
+  <button class="lightbox-arrow prev hidden" id="lb-prev" onclick="event.stopPropagation();changeSlide(-1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="" style="display:none;" />
+  <iframe class="lightbox-canva" id="lightbox-canva" src="" style="display:none;" allowfullscreen></iframe>
+  <button class="lightbox-arrow next hidden" id="lb-next" onclick="event.stopPropagation();changeSlide(1)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+</div>
 
   <script>
     let currentImgs = [];
