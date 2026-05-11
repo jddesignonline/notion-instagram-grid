@@ -16,7 +16,7 @@ export default async function handler(req) {
       'Notion-Version': '2022-06-28',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ page_size: 30 })
+    body: JSON.stringify({ page_size: 100 })
   });
 
   const data = await res.json();
@@ -33,8 +33,16 @@ export default async function handler(req) {
       id: page.id,
       content: props['content']?.title?.[0]?.plain_text || '',
       date: props['publish date']?.date?.start || null,
+      pinned: props['pinned']?.checkbox || false,
+      widget: props['widget']?.checkbox || false,
       img
     };
+  })
+  .filter(p => p.widget)
+  .sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return new Date(b.date) - new Date(a.date);
   });
 
   return new Response(JSON.stringify({ posts }), { status: 200, headers });
