@@ -72,4 +72,248 @@
       <button class="lightbox-arrow prev hidden" id="lb-prev" onclick="event.stopPropagation();changeSlide(-1)">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <img class="lightbox-img" id="li
+      <img class="lightbox-img" id="lightbox-img" src="" alt="" style="display:none;" />
+      <iframe class="lightbox-canva" id="lightbox-canva" src="" style="display:none;" allowfullscreen></iframe>
+      <button class="lightbox-arrow next hidden" id="lb-next" onclick="event.stopPropagation();changeSlide(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="lightbox-dots" id="lb-dots"></div>
+    <div class="lightbox-name" id="lightbox-name"></div>
+    <div class="lightbox-date" id="lightbox-date"></div>
+    <a class="lightbox-notion" id="lightbox-notion" href="" target="_blank">open in notion</a>
+  </div>
+
+  <script>
+    let currentImgs = [];
+    let currentIdx = 0;
+    let designMode = false;
+    let allPosts = [];
+    let dragSrcIdx = null;
+
+    function formatDate(d) {
+      if (!d) return '';
+      return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
+    }
+
+    function canvaEmbedUrl(url) {
+      if (!url) return '';
+      url = url.replace('/view', '/watch');
+      if (!url.includes('?embed')) url = url.replace(/\?.*$/, '') + '?embed';
+      return url;
+    }
+
+    function pinSVG() {
+      return `<svg viewBox="0 0 24 24" fill="#1a1816" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="7" r="5"/>
+        <ellipse cx="12" cy="6" rx="2" ry="1.2" fill="#fff" opacity="0.4"/>
+        <rect x="11" y="12" width="2" height="7" rx="1"/>
+      </svg>`;
+    }
+
+    function carouselSVG() {
+      return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="14" height="14" rx="3" stroke="#1a1816" stroke-width="2"/>
+        <path d="M7 19h11a3 3 0 0 0 3-3V8" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+      </svg>`;
+    }
+
+    function toggleDesignMode() {
+      if (designMode) {
+        saveChanges();
+      } else {
+        designMode = true;
+        document.getElementById('design-btn').textContent = 'save changes';
+        document.getElementById('design-btn').classList.add('saving');
+        document.getElementById('design-banner').classList.add('visible');
+        document.getElementById('btn').disabled = true;
+        document.getElementById('grid').classList.add('design-mode');
+        enableDrag();
+      }
+    }
+
+    function exitDesignMode() {
+      designMode = false;
+      document.getElementById('design-btn').textContent = 'design grid';
+      document.getElementById('design-btn').classList.remove('saving');
+      document.getElementById('design-banner').classList.remove('visible');
+      document.getElementById('btn').disabled = false;
+      document.getElementById('grid').classList.remove('design-mode');
+    }
+
+    function enableDrag() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach((cell, i) => {
+        cell.draggable = true;
+        cell.addEventListener('dragstart', e => {
+          dragSrcIdx = i;
+          setTimeout(() => cell.classList.add('dragging'), 0);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        cell.addEventListener('dragend', () => {
+          cell.classList.remove('dragging');
+          document.querySelectorAll('.cell').forEach(c => c.classList.remove('drag-over'));
+        });
+        cell.addEventListener('dragover', e => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          document.querySelectorAll('.cell').forEach(c => c.classList.remove('drag-over'));
+          cell.classList.add('drag-over');
+        });
+        cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+        cell.addEventListener('drop', e => {
+          e.preventDefault();
+          cell.classList.remove('drag-over');
+          if (dragSrcIdx === null || dragSrcIdx === i) return;
+          const moved = allPosts.splice(dragSrcIdx, 1)[0];
+          allPosts.splice(i, 0, moved);
+          dragSrcIdx = null;
+          renderPosts(allPosts);
+          enableDrag();
+        });
+      });
+    }
+
+    async function saveChanges() {
+      const btn = document.getElementById('design-btn');
+      btn.textContent = 'saving...';
+      btn.disabled = true;
+
+      // collect original dates in current visual order
+      const dates = [...allPosts].map(p => p.date);
+      const updates = allPosts.map((p, i) => ({ id: p.id, date: dates[i] }));
+
+      try {
+        await fetch('/api/notion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update-dates', updates })
+        });
+        exitDesignMode();
+        loadGrid();
+      } catch(e) {
+        btn.textContent = 'save changes';
+        btn.disabled = false;
+        alert('save failed — please try again');
+      }
+    }
+
+    function updateSlide() {
+      const img = currentImgs[currentIdx];
+      document.getElementById('lightbox-img').src = img;
+      document.getElementById('lb-prev').classList.toggle('hidden', currentIdx === 0);
+      document.getElementById('lb-next').classList.toggle('hidden', currentIdx === currentImgs.length - 1);
+      document.querySelectorAll('.lightbox-dot').forEach((d, i) => d.classList.toggle('active', i === currentIdx));
+    }
+
+    function changeSlide(dir) {
+      currentIdx = Math.max(0, Math.min(currentImgs.length - 1, currentIdx + dir));
+      updateSlide();
+    }
+
+    function openLightbox(p) {
+      if (designMode) return;
+      const imgEl = document.getElementById('lightbox-img');
+      const canvaEl = document.getElementById('lightbox-canva');
+      const dotsEl = document.getElementById('lb-dots');
+
+      if (p.imageSource === 'canva' && p.img) {
+        imgEl.style.display = 'none';
+        canvaEl.src = canvaEmbedUrl(p.img);
+        canvaEl.style.display = 'block';
+        currentImgs = [];
+        dotsEl.innerHTML = '';
+      } else {
+        canvaEl.style.display = 'none';
+        canvaEl.src = '';
+        imgEl.style.display = 'block';
+        currentImgs = p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
+        currentIdx = 0;
+        dotsEl.innerHTML = currentImgs.length > 1
+          ? currentImgs.map((_, i) => `<div class="lightbox-dot${i === 0 ? ' active' : ''}"></div>`).join('')
+          : '';
+        updateSlide();
+      }
+
+      document.getElementById('lightbox-name').textContent = p.name || '';
+      document.getElementById('lightbox-date').textContent = formatDate(p.date);
+      document.getElementById('lightbox-notion').href = 'https://notion.so/' + p.id.replace(/-/g, '');
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox(e) {
+      if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
+        document.getElementById('lightbox').classList.remove('open');
+        document.getElementById('lightbox-canva').src = '';
+      }
+    }
+
+    function renderPosts(posts) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      posts.forEach(p => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.onclick = () => openLightbox(p);
+
+        if (p.imageSource === 'canva' && p.img) {
+          const iframe = document.createElement('iframe');
+          iframe.src = canvaEmbedUrl(p.img);
+          iframe.className = 'cell-canva';
+          iframe.allowFullscreen = true;
+          cell.appendChild(iframe);
+        } else if (p.img) {
+          const img = document.createElement('img');
+          img.src = p.img;
+          img.alt = '';
+          cell.appendChild(img);
+        }
+
+        if (p.pinned || p.format === 'carousel') {
+          const badge = document.createElement('div');
+          badge.className = 'badge';
+          badge.innerHTML = p.pinned ? pinSVG() : carouselSVG();
+          cell.appendChild(badge);
+        }
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'label-date';
+        dateEl.textContent = formatDate(p.date);
+        cell.appendChild(dateEl);
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'label-name';
+        nameEl.textContent = p.name;
+        cell.appendChild(nameEl);
+
+        grid.appendChild(cell);
+      });
+    }
+
+    function loadGrid() {
+      const btn = document.getElementById('btn');
+      btn.textContent = 'loading...';
+      btn.disabled = true;
+      document.getElementById('grid').innerHTML = '<div class="loading">loading...</div>';
+      fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        .then(r => r.json())
+        .then(data => {
+          btn.textContent = 'refresh';
+          btn.disabled = false;
+          if (data.error) {
+            document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
+            return;
+          }
+          allPosts = data.posts;
+          renderPosts(allPosts);
+        })
+        .catch(e => {
+          btn.textContent = 'refresh';
+          btn.disabled = false;
+          document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
+        });
+    }
+    loadGrid();
+  </script>
+</body>
+</html>
