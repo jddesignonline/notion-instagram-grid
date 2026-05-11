@@ -29,28 +29,21 @@ export default async function handler(req) {
     const props = page.properties;
     const files = props['attachment']?.files || [];
     const img = files[0]?.file?.url || files[0]?.external?.url || null;
-
-    const widgetProp = props['widget'];
-    const pinnedProp = props['pinned'];
-
     return {
       id: page.id,
-      content: props['content']?.title?.[0]?.plain_text || '',
+      name: props['name']?.title?.[0]?.plain_text || '',
       date: props['publish date']?.date?.start || null,
-      pinned: pinnedProp?.checkbox === true,
-      widget: widgetProp?.checkbox === true,
-      img,
-      debug: { widgetProp, pinnedProp }
+      pinned: props['pinned']?.checkbox === true,
+      widget: props['widget']?.checkbox === true,
+      img
     };
-  });
-
-  const filtered = posts.filter(p => p.widget === true);
-
-  filtered.sort((a, b) => {
+  })
+  .filter(p => p.widget === true)
+  .sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
     if (!a.pinned && b.pinned) return 1;
     return new Date(b.date) - new Date(a.date);
   });
 
-  return new Response(JSON.stringify({ posts: filtered, debug_all: posts.slice(0, 2) }), { status: 200, headers });
+  return new Response(JSON.stringify({ posts }), { status: 200, headers });
 }
