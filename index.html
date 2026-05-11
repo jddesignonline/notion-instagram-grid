@@ -107,19 +107,18 @@
       </svg>`;
     }
 
-    function enterDesignMode() {
-      designMode = true;
-      allPosts.forEach(p => { p._slotDate = p.date; });
-      document.getElementById('design-btn').textContent = 'save changes';
-      document.getElementById('design-btn').classList.add('saving');
-      document.getElementById('design-btn').disabled = false;
-      document.getElementById('design-banner').classList.add('visible');
-      document.getElementById('btn').disabled = true;
-      document.getElementById('grid').classList.add('design-mode');
-      enableDrag();
-    }
+function enterDesignMode() {
+  designMode = true;
+  allPosts.forEach(p => { p._slotDate = p.date; });
+  document.getElementById('design-btn').textContent = 'save changes';
+  document.getElementById('design-btn').classList.add('saving');
+  document.getElementById('design-banner').classList.add('visible');
+  document.getElementById('btn').setAttribute('disabled', '');
+  document.getElementById('grid').classList.add('design-mode');
+  enableDrag();
+}
 
-    function exitDesignMode() {
+function exitDesignMode() {
   designMode = false;
   document.getElementById('design-btn').textContent = 'design grid';
   document.getElementById('design-btn').classList.remove('saving');
@@ -190,31 +189,20 @@
     }
 
 async function saveChanges() {
-  console.log('saveChanges started');
-  const btn = document.getElementById('design-btn');
-  btn.textContent = 'saving...';
-  btn.disabled = true;
-
+  document.getElementById('design-btn').textContent = 'saving...';
   const updates = allPosts.map(p => ({ id: p.id, date: p._slotDate }));
-  console.log('sending updates:', updates.length);
-
   try {
-    const res = await fetch('/api/notion', {
+    await fetch('/api/notion', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update-dates', updates })
     });
-    console.log('response status:', res.status);
-    if (!res.ok) throw new Error('failed');
     allPosts.forEach(p => { p.date = p._slotDate; });
-    console.log('about to call exitDesignMode');
-    exitDesignMode();
-    console.log('exitDesignMode done, btn disabled:', document.getElementById('design-btn').disabled);
-    renderPosts(allPosts);
-    console.log('renderPosts done, btn disabled:', document.getElementById('design-btn').disabled);
   } catch(e) {
-    console.log('error:', e);
+    alert('save failed — please try again');
+  } finally {
     exitDesignMode();
+    renderPosts(allPosts);
   }
 }
 
