@@ -130,12 +130,13 @@
     }
 
     function toggleDesignMode() {
-      if (designMode) {
-        saveChanges();
-      } else {
-        enterDesignMode();
-      }
-    }
+  console.log('toggleDesignMode clicked, designMode is:', designMode);
+  if (designMode) {
+    saveChanges();
+  } else {
+    enterDesignMode();
+  }
+}
 
     function enableDrag() {
       document.querySelectorAll('.cell').forEach((cell, i) => {
