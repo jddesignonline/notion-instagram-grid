@@ -64,15 +64,15 @@ export default async function handler(req) {
     const imgs = allImgs.length ? allImgs : (linkUrl ? [linkUrl] : []);
 
     return {
-      id: page.id,
-      name: props['name']?.title?.[0]?.plain_text || '',
-      date: props['publish date']?.date?.start || null,
-      pinned: props['pinned']?.checkbox === true,
-      widget: props['widget']?.checkbox === true,
-      format,
-      img,
-      imgs
-    };
+  id: page.id,
+  name: props['name']?.title?.[0]?.plain_text || '',
+  date: props['publish date']?.date?.start || null,
+  pinned: props['pinned']?.checkbox === true,
+  widget: props['widget']?.checkbox === true,
+  format: allImgs.length > 1 ? 'carousel' : (props['format']?.select?.name || '').toLowerCase(),
+  img,
+  imgs
+};
   })
   .filter(p => p.widget === true)
   .sort((a, b) => {
