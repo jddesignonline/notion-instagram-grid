@@ -24,6 +24,16 @@
     .pin svg { width: 14px; height: 14px; }
     .loading { padding: 2rem; text-align: center; color: #999; font-size: 14px; }
     .error { padding: 2rem; color: red; font-size: 14px; }
+
+    /* lightbox */
+    .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
+    .lightbox.open { display: flex; }
+    .lightbox-img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; }
+    .lightbox-name { color: #fff; font-size: 14px; margin-top: 14px; text-align: center; max-width: 80%; line-height: 1.4; }
+    .lightbox-date { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 4px; }
+    .lightbox-close { position: absolute; top: 14px; right: 18px; color: #fff; font-size: 28px; cursor: pointer; line-height: 1; background: none; border: none; }
+    .lightbox-notion { margin-top: 14px; font-size: 12px; padding: 6px 16px; border-radius: 999px; background: #fff; color: #1a1816; text-decoration: none; font-weight: 500; }
+    .lightbox-notion:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -32,10 +42,33 @@
     <a class="credit-btn" href="https://www.etsy.com/shop/jddesignonline" target="_blank">widget by jddesignonline</a>
   </div>
   <div class="grid" id="grid"><div class="loading">loading...</div></div>
+
+  <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <button class="lightbox-close" onclick="closeLightbox()">×</button>
+    <img class="lightbox-img" id="lightbox-img" src="" alt="" />
+    <div class="lightbox-name" id="lightbox-name"></div>
+    <div class="lightbox-date" id="lightbox-date"></div>
+    <a class="lightbox-notion" id="lightbox-notion" href="" target="_blank">open in notion</a>
+  </div>
+
   <script>
     function formatDate(d) {
       if (!d) return '';
       return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
+    }
+
+    function openLightbox(p) {
+      document.getElementById('lightbox-img').src = p.img || '';
+      document.getElementById('lightbox-name').textContent = p.name || '';
+      document.getElementById('lightbox-date').textContent = formatDate(p.date);
+      document.getElementById('lightbox-notion').href = 'https://notion.so/' + p.id.replace(/-/g, '');
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox(e) {
+      if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
+        document.getElementById('lightbox').classList.remove('open');
+      }
     }
 
     function renderPosts(posts) {
@@ -44,7 +77,7 @@
       posts.forEach(p => {
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.onclick = () => window.open('https://notion.so/' + p.id.replace(/-/g, ''), '_blank');
+        cell.onclick = () => openLightbox(p);
 
         if (p.img) {
           const img = document.createElement('img');
