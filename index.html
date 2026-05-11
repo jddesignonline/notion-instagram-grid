@@ -17,14 +17,12 @@
     .credit-btn { font-size: 12px; padding: 7px 16px; border-radius: 999px; border: none; background: #1a1816; color: #fff; cursor: pointer; letter-spacing: 0.02em; text-decoration: none; display: inline-block; }
     .credit-btn:hover { opacity: 0.85; }
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
-    .grid.design-mode { cursor: grab; }
     .cell { aspect-ratio: 3 / 4; background: #f0f0f0; overflow: hidden; cursor: pointer; position: relative; transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s; }
     .grid.design-mode .cell { cursor: grab; }
     .cell.dragging { opacity: 0.4; cursor: grabbing; }
     .cell.drag-over { box-shadow: inset 0 0 0 3px #b573ff; transform: scale(0.97); }
     .cell img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
     .cell:hover img { transform: scale(1.03); }
-    .cell-canva { width: 100%; height: 100%; border: none; display: block; pointer-events: none; }
     .label-date { position: absolute; top: 8px; left: 8px; background: #1a1816; color: #fff; font-size: 13px; font-weight: 500; padding: 3px 10px; border-radius: 999px; opacity: 0; transition: opacity 0.2s; }
     .label-name { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.4); color: #fff; font-size: 15px; font-weight: 500; padding: 10px 12px; opacity: 0; transition: opacity 0.2s; line-height: 1.3; }
     .cell:hover .label-date { opacity: 1; }
@@ -39,7 +37,6 @@
     .lightbox.open { display: flex; }
     .lightbox-media { position: relative; display: flex; align-items: center; justify-content: center; }
     .lightbox-img { max-width: 100%; max-height: 72vh; object-fit: contain; border-radius: 8px; display: block; }
-    .lightbox-canva { width: 340px; height: 480px; border: none; border-radius: 8px; }
     .lightbox-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
     .lightbox-arrow:hover { background: rgba(255,255,255,0.35); }
     .lightbox-arrow.prev { left: -44px; }
@@ -73,7 +70,6 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <img class="lightbox-img" id="lightbox-img" src="" alt="" style="display:none;" />
-      <iframe class="lightbox-canva" id="lightbox-canva" src="" style="display:none;" allowfullscreen></iframe>
       <button class="lightbox-arrow next hidden" id="lb-next" onclick="event.stopPropagation();changeSlide(1)">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
@@ -90,17 +86,11 @@
     let designMode = false;
     let allPosts = [];
     let dragSrcIdx = null;
+    let originalDates = [];
 
     function formatDate(d) {
       if (!d) return '';
       return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
-    }
-
-    function canvaEmbedUrl(url) {
-      if (!url) return '';
-      url = url.replace('/view', '/watch');
-      if (!url.includes('?embed')) url = url.replace(/\?.*$/, '') + '?embed';
-      return url;
     }
 
     function pinSVG() {
@@ -123,6 +113,7 @@
         saveChanges();
       } else {
         designMode = true;
+        originalDates = allPosts.map(p => p.date);
         document.getElementById('design-btn').textContent = 'save changes';
         document.getElementById('design-btn').classList.add('saving');
         document.getElementById('design-banner').classList.add('visible');
@@ -179,9 +170,7 @@
       btn.textContent = 'saving...';
       btn.disabled = true;
 
-      // collect original dates in current visual order
-      const dates = [...allPosts].map(p => p.date);
-      const updates = allPosts.map((p, i) => ({ id: p.id, date: dates[i] }));
+      const updates = allPosts.map((p, i) => ({ id: p.id, date: originalDates[i] }));
 
       try {
         await fetch('/api/notion', {
@@ -214,106 +203,18 @@
     function openLightbox(p) {
       if (designMode) return;
       const imgEl = document.getElementById('lightbox-img');
-      const canvaEl = document.getElementById('lightbox-canva');
       const dotsEl = document.getElementById('lb-dots');
 
-      if (p.imageSource === 'canva' && p.img) {
-        imgEl.style.display = 'none';
-        canvaEl.src = canvaEmbedUrl(p.img);
-        canvaEl.style.display = 'block';
-        currentImgs = [];
-        dotsEl.innerHTML = '';
-      } else {
-        canvaEl.style.display = 'none';
-        canvaEl.src = '';
-        imgEl.style.display = 'block';
-        currentImgs = p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
-        currentIdx = 0;
-        dotsEl.innerHTML = currentImgs.length > 1
-          ? currentImgs.map((_, i) => `<div class="lightbox-dot${i === 0 ? ' active' : ''}"></div>`).join('')
-          : '';
-        updateSlide();
-      }
+      imgEl.style.display = 'block';
+      currentImgs = p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
+      currentIdx = 0;
+
+      dotsEl.innerHTML = currentImgs.length > 1
+        ? currentImgs.map((_, i) => `<div class="lightbox-dot${i === 0 ? ' active' : ''}"></div>`).join('')
+        : '';
+
+      updateSlide();
 
       document.getElementById('lightbox-name').textContent = p.name || '';
       document.getElementById('lightbox-date').textContent = formatDate(p.date);
-      document.getElementById('lightbox-notion').href = 'https://notion.so/' + p.id.replace(/-/g, '');
-      document.getElementById('lightbox').classList.add('open');
-    }
-
-    function closeLightbox(e) {
-      if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
-        document.getElementById('lightbox').classList.remove('open');
-        document.getElementById('lightbox-canva').src = '';
-      }
-    }
-
-    function renderPosts(posts) {
-      const grid = document.getElementById('grid');
-      grid.innerHTML = '';
-      posts.forEach(p => {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.onclick = () => openLightbox(p);
-
-        if (p.imageSource === 'canva' && p.img) {
-          const iframe = document.createElement('iframe');
-          iframe.src = canvaEmbedUrl(p.img);
-          iframe.className = 'cell-canva';
-          iframe.allowFullscreen = true;
-          cell.appendChild(iframe);
-        } else if (p.img) {
-          const img = document.createElement('img');
-          img.src = p.img;
-          img.alt = '';
-          cell.appendChild(img);
-        }
-
-        if (p.pinned || p.format === 'carousel') {
-          const badge = document.createElement('div');
-          badge.className = 'badge';
-          badge.innerHTML = p.pinned ? pinSVG() : carouselSVG();
-          cell.appendChild(badge);
-        }
-
-        const dateEl = document.createElement('div');
-        dateEl.className = 'label-date';
-        dateEl.textContent = formatDate(p.date);
-        cell.appendChild(dateEl);
-
-        const nameEl = document.createElement('div');
-        nameEl.className = 'label-name';
-        nameEl.textContent = p.name;
-        cell.appendChild(nameEl);
-
-        grid.appendChild(cell);
-      });
-    }
-
-    function loadGrid() {
-      const btn = document.getElementById('btn');
-      btn.textContent = 'loading...';
-      btn.disabled = true;
-      document.getElementById('grid').innerHTML = '<div class="loading">loading...</div>';
-      fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-        .then(r => r.json())
-        .then(data => {
-          btn.textContent = 'refresh';
-          btn.disabled = false;
-          if (data.error) {
-            document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
-            return;
-          }
-          allPosts = data.posts;
-          renderPosts(allPosts);
-        })
-        .catch(e => {
-          btn.textContent = 'refresh';
-          btn.disabled = false;
-          document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
-        });
-    }
-    loadGrid();
-  </script>
-</body>
-</html>
+      document.getElementById('lightbox-notion').href = 'https://notion.so
