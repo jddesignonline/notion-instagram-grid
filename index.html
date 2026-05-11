@@ -21,15 +21,26 @@
     .label-name { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.4); color: #fff; font-size: 15px; font-weight: 500; padding: 10px 12px; opacity: 0; transition: opacity 0.2s; line-height: 1.3; }
     .cell:hover .label-date { opacity: 1; }
     .cell:hover .label-name { opacity: 1; }
-    .pin { position: absolute; top: 8px; right: 8px; background: #fff; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
-    .pin svg { width: 14px; height: 14px; }
+    .badge { position: absolute; top: 8px; right: 8px; background: #fff; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+    .badge svg { width: 14px; height: 14px; }
     .loading { padding: 2rem; text-align: center; color: #999; font-size: 14px; }
     .error { padding: 2rem; color: red; font-size: 14px; }
+
+    /* lightbox */
     .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; flex-direction: column; padding: 20px; }
     .lightbox.open { display: flex; }
-    .lightbox-img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; }
+    .lightbox-media { position: relative; display: flex; align-items: center; justify-content: center; }
+    .lightbox-img { max-width: 100%; max-height: 72vh; object-fit: contain; border-radius: 8px; display: block; }
     .lightbox-canva { width: 340px; height: 480px; border: none; border-radius: 8px; }
-    .lightbox-name { color: #fff; font-size: 14px; margin-top: 14px; text-align: center; max-width: 80%; line-height: 1.4; }
+    .lightbox-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: #fff; font-size: 20px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+    .lightbox-arrow:hover { background: rgba(255,255,255,0.35); }
+    .lightbox-arrow.prev { left: -44px; }
+    .lightbox-arrow.next { right: -44px; }
+    .lightbox-arrow.hidden { opacity: 0; pointer-events: none; }
+    .lightbox-dots { display: flex; gap: 5px; margin-top: 10px; justify-content: center; }
+    .lightbox-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); transition: background 0.15s; }
+    .lightbox-dot.active { background: #fff; }
+    .lightbox-name { color: #fff; font-size: 14px; margin-top: 12px; text-align: center; max-width: 80%; line-height: 1.4; }
     .lightbox-date { color: rgba(255,255,255,0.6); font-size: 12px; margin-top: 4px; }
     .lightbox-close { position: absolute; top: 14px; right: 18px; color: #fff; font-size: 28px; cursor: pointer; line-height: 1; background: none; border: none; }
     .lightbox-notion { margin-top: 14px; font-size: 12px; padding: 6px 16px; border-radius: 999px; background: #fff; color: #1a1816; text-decoration: none; font-weight: 500; }
@@ -45,32 +56,78 @@
 
   <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
     <button class="lightbox-close" onclick="closeLightbox()">×</button>
-    <img class="lightbox-img" id="lightbox-img" src="" alt="" style="display:none;" />
-    <iframe class="lightbox-canva" id="lightbox-canva" src="" style="display:none;" allowfullscreen></iframe>
+    <div class="lightbox-media">
+      <button class="lightbox-arrow prev hidden" id="lb-prev" onclick="event.stopPropagation();changeSlide(-1)">‹</button>
+      <img class="lightbox-img" id="lightbox-img" src="" alt="" style="display:none;" />
+      <iframe class="lightbox-canva" id="lightbox-canva" src="" style="display:none;" allowfullscreen></iframe>
+      <button class="lightbox-arrow next hidden" id="lb-next" onclick="event.stopPropagation();changeSlide(1)">›</button>
+    </div>
+    <div class="lightbox-dots" id="lb-dots"></div>
     <div class="lightbox-name" id="lightbox-name"></div>
     <div class="lightbox-date" id="lightbox-date"></div>
     <a class="lightbox-notion" id="lightbox-notion" href="" target="_blank">open in notion</a>
   </div>
 
   <script>
+    let currentImgs = [];
+    let currentIdx = 0;
+
     function formatDate(d) {
       if (!d) return '';
       return new Date(d).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
     }
 
+    function pinSVG() {
+      return `<svg viewBox="0 0 24 24" fill="#1a1816" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="7" r="5"/>
+        <ellipse cx="12" cy="6" rx="2" ry="1.2" fill="#fff" opacity="0.4"/>
+        <rect x="11" y="12" width="2" height="7" rx="1"/>
+      </svg>`;
+    }
+
+    function carouselSVG() {
+      return `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="3" width="14" height="14" rx="3" stroke="#1a1816" stroke-width="2"/>
+        <path d="M7 19h11a3 3 0 0 0 3-3V8" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"/>
+      </svg>`;
+    }
+
+    function updateSlide() {
+      const img = currentImgs[currentIdx];
+      document.getElementById('lightbox-img').src = img;
+      document.getElementById('lb-prev').classList.toggle('hidden', currentIdx === 0);
+      document.getElementById('lb-next').classList.toggle('hidden', currentIdx === currentImgs.length - 1);
+      document.querySelectorAll('.lightbox-dot').forEach((d, i) => d.classList.toggle('active', i === currentIdx));
+    }
+
+    function changeSlide(dir) {
+      currentIdx = Math.max(0, Math.min(currentImgs.length - 1, currentIdx + dir));
+      updateSlide();
+    }
+
     function openLightbox(p) {
       const imgEl = document.getElementById('lightbox-img');
       const canvaEl = document.getElementById('lightbox-canva');
+      const dotsEl = document.getElementById('lb-dots');
 
       if (p.imageSource === 'canva' && p.img) {
         imgEl.style.display = 'none';
         canvaEl.src = p.img;
         canvaEl.style.display = 'block';
+        currentImgs = [];
+        dotsEl.innerHTML = '';
       } else {
         canvaEl.style.display = 'none';
         canvaEl.src = '';
-        imgEl.src = p.img || '';
-        imgEl.style.display = p.img ? 'block' : 'none';
+        imgEl.style.display = 'block';
+        currentImgs = p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
+        currentIdx = 0;
+
+        dotsEl.innerHTML = currentImgs.length > 1
+          ? currentImgs.map((_, i) => `<div class="lightbox-dot${i === 0 ? ' active' : ''}"></div>`).join('')
+          : '';
+
+        updateSlide();
       }
 
       document.getElementById('lightbox-name').textContent = p.name || '';
@@ -107,15 +164,12 @@
           cell.appendChild(img);
         }
 
-        if (p.pinned) {
-          const pin = document.createElement('div');
-          pin.className = 'pin';
-          pin.innerHTML = `<svg viewBox="0 0 24 24" fill="#1a1816" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="7" r="5"/>
-            <ellipse cx="12" cy="6" rx="2" ry="1.2" fill="#fff" opacity="0.4"/>
-            <rect x="11" y="12" width="2" height="7" rx="1"/>
-          </svg>`;
-          cell.appendChild(pin);
+        // badge — pin takes priority over carousel
+        if (p.pinned || p.format === 'carousel') {
+          const badge = document.createElement('div');
+          badge.className = 'badge';
+          badge.innerHTML = p.pinned ? pinSVG() : carouselSVG();
+          cell.appendChild(badge);
         }
 
         const dateEl = document.createElement('div');
