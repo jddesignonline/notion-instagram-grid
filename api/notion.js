@@ -31,7 +31,7 @@ export default async function handler(req) {
     const attachmentUrl = files[0]?.file?.url || files[0]?.external?.url || null;
     const linkUrl = props['link']?.url || props['link']?.rich_text?.[0]?.plain_text || null;
     const canvaUrl = props['canva link']?.url || props['canva link']?.rich_text?.[0]?.plain_text || null;
-    const imageSource = (props['image source']?.select?.name || '').toLowerCase();
+    const imageSource = (props['source']?.select?.name || '').toLowerCase();
 
     let img = null;
     if (imageSource === 'notion') img = attachmentUrl;
