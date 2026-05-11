@@ -16,10 +16,7 @@ export default async function handler(req) {
       'Notion-Version': '2022-06-28',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      page_size: 30,
-      sorts: [{ property: 'publish date', direction: 'descending' }]
-    })
+    body: JSON.stringify({ page_size: 30 })
   });
 
   const data = await res.json();
@@ -34,7 +31,7 @@ export default async function handler(req) {
     const img = files[0]?.file?.url || files[0]?.external?.url || null;
     return {
       id: page.id,
-      name: props['content']?.title?.[0]?.plain_text || '',
+      content: props['content']?.title?.[0]?.plain_text || '',
       date: props['publish date']?.date?.start || null,
       img
     };
