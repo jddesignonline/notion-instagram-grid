@@ -11,6 +11,7 @@
     .toolbar-left { display: flex; gap: 8px; }
     .refresh-btn { font-size: 12px; padding: 7px 16px; border-radius: 999px; border: none; background: #b573ff; color: #fff; cursor: pointer; letter-spacing: 0.02em; }
     .refresh-btn:hover { opacity: 0.85; }
+    .refresh-btn.cancel { background: #e8e4de; color: #1a1816; }
     .design-btn { font-size: 12px; padding: 7px 16px; border-radius: 999px; border: none; background: #f0ede8; color: #1a1816; cursor: pointer; letter-spacing: 0.02em; }
     .design-btn:hover { background: #e8e4de; }
     .design-btn.saving { background: #1a1816; color: #fff; }
@@ -29,6 +30,9 @@
     .label-name { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.4); color: #fff; font-size: 15px; font-weight: 500; padding: 10px 12px; opacity: 0; transition: opacity 0.2s; line-height: 1.3; }
     .cell:hover .label-date { opacity: 1; }
     .cell:hover .label-name { opacity: 1; }
+    .grid.design-mode .label-date { opacity: 1; }
+    .grid.design-mode .label-name { opacity: 1; }
+    .cell.moved .label-date { background: #b573ff; }
     .badge { position: absolute; top: 8px; right: 8px; background: #fff; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
     .badge svg { width: 14px; height: 14px; }
     .loading { padding: 2rem; text-align: center; color: #999; font-size: 14px; }
@@ -107,35 +111,37 @@
       </svg>`;
     }
 
-function enterDesignMode() {
-  designMode = true;
-  allPosts.forEach(p => { p._slotDate = p.date; });
-  document.getElementById('design-btn').textContent = 'save changes';
-  document.getElementById('design-btn').classList.add('saving');
-  document.getElementById('design-banner').classList.add('visible');
-  document.getElementById('btn').setAttribute('disabled', '');
-  document.getElementById('grid').classList.add('design-mode');
-  enableDrag();
-}
+    function enterDesignMode() {
+      designMode = true;
+      allPosts.forEach(p => { p._slotDate = p.date; });
+      document.getElementById('design-btn').textContent = 'save changes';
+      document.getElementById('design-btn').classList.add('saving');
+      document.getElementById('design-banner').classList.add('visible');
+      document.getElementById('btn').textContent = 'cancel';
+      document.getElementById('btn').classList.add('cancel');
+      document.getElementById('grid').classList.add('design-mode');
+      enableDrag();
+    }
 
-function exitDesignMode() {
-  designMode = false;
-  document.getElementById('design-btn').textContent = 'design grid';
-  document.getElementById('design-btn').classList.remove('saving');
-  document.getElementById('design-btn').removeAttribute('disabled');
-  document.getElementById('design-banner').classList.remove('visible');
-  document.getElementById('btn').removeAttribute('disabled');
-  document.getElementById('grid').classList.remove('design-mode');
-}
+    function exitDesignMode() {
+      designMode = false;
+      document.getElementById('design-btn').textContent = 'design grid';
+      document.getElementById('design-btn').classList.remove('saving');
+      document.getElementById('design-btn').removeAttribute('disabled');
+      document.getElementById('design-banner').classList.remove('visible');
+      document.getElementById('btn').textContent = 'refresh';
+      document.getElementById('btn').classList.remove('cancel');
+      document.getElementById('btn').removeAttribute('disabled');
+      document.getElementById('grid').classList.remove('design-mode');
+    }
 
     function toggleDesignMode() {
-  console.log('toggleDesignMode clicked, designMode is:', designMode);
-  if (designMode) {
-    saveChanges();
-  } else {
-    enterDesignMode();
-  }
-}
+      if (designMode) {
+        saveChanges();
+      } else {
+        enterDesignMode();
+      }
+    }
 
     function enableDrag() {
       document.querySelectorAll('.cell').forEach((cell, i) => {
@@ -160,51 +166,52 @@ function exitDesignMode() {
 
         cell.ondragleave = () => cell.classList.remove('drag-over');
 
-       cell.ondrop = e => {
-  e.preventDefault();
-  cell.classList.remove('drag-over');
-  if (dragSrcIdx === null || dragSrcIdx === i) return;
+        cell.ondrop = e => {
+          e.preventDefault();
+          cell.classList.remove('drag-over');
+          if (dragSrcIdx === null || dragSrcIdx === i) return;
 
-  const from = dragSrcIdx;
-  const to = i;
+          const from = dragSrcIdx;
+          const to = i;
 
-  // capture slot dates before swap
-  const fromDate = allPosts[from]._slotDate;
-  const toDate = allPosts[to]._slotDate;
+          const fromDate = allPosts[from]._slotDate;
+          const toDate = allPosts[to]._slotDate;
 
-  // swap posts
-  const tmp = allPosts[from];
-  allPosts[from] = allPosts[to];
-  allPosts[to] = tmp;
+          const tmp = allPosts[from];
+          allPosts[from] = allPosts[to];
+          allPosts[to] = tmp;
 
-  // now apply dates to correct positions
-  allPosts[from]._slotDate = fromDate;
-  allPosts[to]._slotDate = toDate;
+          allPosts[from]._slotDate = fromDate;
+          allPosts[to]._slotDate = toDate;
 
-  dragSrcIdx = null;
-  renderPosts(allPosts);
-  enableDrag();
-};
+          dragSrcIdx = null;
+          renderPosts(allPosts);
+          enableDrag();
+
+          const cells = document.querySelectorAll('.cell');
+          cells[from].classList.add('moved');
+          cells[to].classList.add('moved');
+        };
       });
     }
 
-async function saveChanges() {
-  document.getElementById('design-btn').textContent = 'saving...';
-  const updates = allPosts.map(p => ({ id: p.id, date: p._slotDate }));
-  try {
-    await fetch('/api/notion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update-dates', updates })
-    });
-    allPosts.forEach(p => { p.date = p._slotDate; });
-  } catch(e) {
-    alert('save failed — please try again');
-  } finally {
-    exitDesignMode();
-    renderPosts(allPosts);
-  }
-}
+    async function saveChanges() {
+      document.getElementById('design-btn').textContent = 'saving...';
+      const updates = allPosts.map(p => ({ id: p.id, date: p._slotDate }));
+      try {
+        await fetch('/api/notion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update-dates', updates })
+        });
+        allPosts.forEach(p => { p.date = p._slotDate; });
+      } catch(e) {
+        alert('save failed — please try again');
+      } finally {
+        exitDesignMode();
+        renderPosts(allPosts);
+      }
+    }
 
     function updateSlide() {
       document.getElementById('lightbox-img').src = currentImgs[currentIdx];
@@ -276,15 +283,21 @@ async function saveChanges() {
     }
 
     function loadGrid() {
+      if (designMode) {
+        allPosts.forEach(p => { p.date = p._slotDate; });
+        exitDesignMode();
+        renderPosts(allPosts);
+        return;
+      }
       const btn = document.getElementById('btn');
       btn.textContent = 'loading...';
-      btn.disabled = true;
+      btn.setAttribute('disabled', '');
       document.getElementById('grid').innerHTML = '<div class="loading">loading...</div>';
       fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
         .then(r => r.json())
         .then(data => {
           btn.textContent = 'refresh';
-          btn.disabled = false;
+          btn.removeAttribute('disabled');
           if (data.error) {
             document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
             return;
@@ -294,7 +307,7 @@ async function saveChanges() {
         })
         .catch(e => {
           btn.textContent = 'refresh';
-          btn.disabled = false;
+          btn.removeAttribute('disabled');
           document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
         });
     }
