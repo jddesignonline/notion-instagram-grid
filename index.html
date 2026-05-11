@@ -70,7 +70,7 @@
       fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
         .then(r => r.json())
         .then(data => {
-          btn.innerHTML = '↻ refresh';
+          btn.innerHTML = 'refresh';
           btn.disabled = false;
           if (data.error) {
             document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
@@ -79,7 +79,7 @@
           renderPosts(data.posts);
         })
         .catch(e => {
-          btn.innerHTML = '↻ refresh';
+          btn.innerHTML = 'refresh';
           btn.disabled = false;
           document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
         });
