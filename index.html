@@ -189,18 +189,14 @@
       });
     }
 
-    async function saveChanges() {
+async function saveChanges() {
+  console.log('saveChanges started');
   const btn = document.getElementById('design-btn');
   btn.textContent = 'saving...';
   btn.disabled = true;
 
-  console.log('--- saving ---');
-  allPosts.forEach((p, i) => {
-    console.log(i, p.name, 'slotDate:', p._slotDate, 'date:', p.date);
-  });
-
   const updates = allPosts.map(p => ({ id: p.id, date: p._slotDate }));
-  console.log('updates:', JSON.stringify(updates));
+  console.log('sending updates:', updates.length);
 
   try {
     const res = await fetch('/api/notion', {
@@ -208,15 +204,16 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'update-dates', updates })
     });
+    console.log('response status:', res.status);
     if (!res.ok) throw new Error('failed');
     allPosts.forEach(p => { p.date = p._slotDate; });
-    console.log('designMode before exit:', designMode);
+    console.log('about to call exitDesignMode');
     exitDesignMode();
-    console.log('designMode after exit:', designMode);
+    console.log('exitDesignMode done, btn disabled:', document.getElementById('design-btn').disabled);
     renderPosts(allPosts);
+    console.log('renderPosts done, btn disabled:', document.getElementById('design-btn').disabled);
   } catch(e) {
     console.log('error:', e);
-    alert('save failed — please try again');
     exitDesignMode();
   }
 }
