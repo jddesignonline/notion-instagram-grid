@@ -122,3 +122,182 @@
     function exitDesignMode() {
       designMode = false;
       document.getElementById('design-btn').textContent = 'design grid';
+      document.getElementById('design-btn').classList.remove('saving');
+      document.getElementById('design-btn').disabled = false;
+      document.getElementById('design-banner').classList.remove('visible');
+      document.getElementById('btn').disabled = false;
+      document.getElementById('grid').classList.remove('design-mode');
+    }
+
+    function toggleDesignMode() {
+      if (designMode) {
+        saveChanges();
+      } else {
+        enterDesignMode();
+      }
+    }
+
+    function enableDrag() {
+      document.querySelectorAll('.cell').forEach((cell, i) => {
+        cell.draggable = true;
+
+        cell.ondragstart = e => {
+          dragSrcIdx = i;
+          e.dataTransfer.effectAllowed = 'move';
+          setTimeout(() => cell.classList.add('dragging'), 0);
+        };
+
+        cell.ondragend = () => {
+          cell.classList.remove('dragging');
+          document.querySelectorAll('.cell').forEach(c => c.classList.remove('drag-over'));
+        };
+
+        cell.ondragover = e => {
+          e.preventDefault();
+          document.querySelectorAll('.cell').forEach(c => c.classList.remove('drag-over'));
+          cell.classList.add('drag-over');
+        };
+
+        cell.ondragleave = () => cell.classList.remove('drag-over');
+
+        cell.ondrop = e => {
+          e.preventDefault();
+          cell.classList.remove('drag-over');
+          if (dragSrcIdx === null || dragSrcIdx === i) return;
+
+          // swap posts
+          const tmp = allPosts[dragSrcIdx];
+          allPosts[dragSrcIdx] = allPosts[i];
+          allPosts[i] = tmp;
+
+          // swap slot dates to match new positions
+          const tmpDate = allPosts[dragSrcIdx]._slotDate;
+          allPosts[dragSrcIdx]._slotDate = allPosts[i]._slotDate;
+          allPosts[i]._slotDate = tmpDate;
+
+          dragSrcIdx = null;
+          renderPosts(allPosts);
+          enableDrag();
+        };
+      });
+    }
+
+    async function saveChanges() {
+      const btn = document.getElementById('design-btn');
+      btn.textContent = 'saving...';
+      btn.disabled = true;
+
+      const updates = allPosts.map(p => ({ id: p.id, date: p._slotDate }));
+
+      try {
+        const res = await fetch('/api/notion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'update-dates', updates })
+        });
+        if (!res.ok) throw new Error('failed');
+        allPosts.forEach(p => { p.date = p._slotDate; });
+        exitDesignMode();
+        renderPosts(allPosts);
+      } catch(e) {
+        alert('save failed — please try again');
+        exitDesignMode();
+      }
+    }
+
+    function updateSlide() {
+      document.getElementById('lightbox-img').src = currentImgs[currentIdx];
+      document.getElementById('lb-prev').classList.toggle('hidden', currentIdx === 0);
+      document.getElementById('lb-next').classList.toggle('hidden', currentIdx === currentImgs.length - 1);
+      document.querySelectorAll('.lightbox-dot').forEach((d, i) => d.classList.toggle('active', i === currentIdx));
+    }
+
+    function changeSlide(dir) {
+      currentIdx = Math.max(0, Math.min(currentImgs.length - 1, currentIdx + dir));
+      updateSlide();
+    }
+
+    function openLightbox(p) {
+      if (designMode) return;
+      currentImgs = p.imgs && p.imgs.length ? p.imgs : (p.img ? [p.img] : []);
+      currentIdx = 0;
+      document.getElementById('lightbox-img').style.display = 'block';
+      document.getElementById('lb-dots').innerHTML = currentImgs.length > 1
+        ? currentImgs.map((_, i) => `<div class="lightbox-dot${i === 0 ? ' active' : ''}"></div>`).join('')
+        : '';
+      updateSlide();
+      document.getElementById('lightbox-name').textContent = p.name || '';
+      document.getElementById('lightbox-date').textContent = formatDate(p.date);
+      document.getElementById('lightbox-notion').href = 'https://notion.so/' + p.id.replace(/-/g, '');
+      document.getElementById('lightbox').classList.add('open');
+    }
+
+    function closeLightbox(e) {
+      if (!e || e.target === document.getElementById('lightbox') || e.target.classList.contains('lightbox-close')) {
+        document.getElementById('lightbox').classList.remove('open');
+      }
+    }
+
+    function renderPosts(posts) {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+      posts.forEach(p => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.onclick = () => openLightbox(p);
+
+        if (p.img) {
+          const img = document.createElement('img');
+          img.src = p.img;
+          img.alt = '';
+          cell.appendChild(img);
+        }
+
+        if (p.pinned || p.format === 'carousel') {
+          const badge = document.createElement('div');
+          badge.className = 'badge';
+          badge.innerHTML = p.pinned ? pinSVG() : carouselSVG();
+          cell.appendChild(badge);
+        }
+
+        const dateEl = document.createElement('div');
+        dateEl.className = 'label-date';
+        dateEl.textContent = formatDate(p.date);
+        cell.appendChild(dateEl);
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'label-name';
+        nameEl.textContent = p.name;
+        cell.appendChild(nameEl);
+
+        grid.appendChild(cell);
+      });
+    }
+
+    function loadGrid() {
+      const btn = document.getElementById('btn');
+      btn.textContent = 'loading...';
+      btn.disabled = true;
+      document.getElementById('grid').innerHTML = '<div class="loading">loading...</div>';
+      fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        .then(r => r.json())
+        .then(data => {
+          btn.textContent = 'refresh';
+          btn.disabled = false;
+          if (data.error) {
+            document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
+            return;
+          }
+          allPosts = data.posts;
+          renderPosts(allPosts);
+        })
+        .catch(e => {
+          btn.textContent = 'refresh';
+          btn.disabled = false;
+          document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
+        });
+    }
+    loadGrid();
+  </script>
+</body>
+</html>
