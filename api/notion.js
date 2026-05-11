@@ -34,7 +34,7 @@ export default async function handler(req) {
     const img = files[0]?.file?.url || files[0]?.external?.url || null;
     return {
       id: page.id,
-      name: props['name']?.title?.[0]?.plain_text || '',
+      name: props['content']?.title?.[0]?.plain_text || '',
       date: props['publish date']?.date?.start || null,
       img
     };
