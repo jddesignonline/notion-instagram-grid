@@ -9,6 +9,32 @@ export default async function handler(req) {
   const token = process.env.NOTION_TOKEN;
   const dbId = process.env.NOTION_DATABASE_ID;
 
+  if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
+
+  const body = await req.json().catch(() => ({}));
+
+  // update dates
+  if (body.action === 'update-dates') {
+    const updates = body.updates || [];
+    await Promise.all(updates.map(({ id, date }) =>
+      fetch(`https://api.notion.com/v1/pages/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          properties: {
+            'publish date': { date: date ? { start: date } : null }
+          }
+        })
+      })
+    ));
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
+  }
+
+  // default: query
   const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
     method: 'POST',
     headers: {
