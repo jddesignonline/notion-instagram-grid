@@ -189,27 +189,36 @@
     }
 
     async function saveChanges() {
-      const btn = document.getElementById('design-btn');
-      btn.textContent = 'saving...';
-      btn.disabled = true;
+  const btn = document.getElementById('design-btn');
+  btn.textContent = 'saving...';
+  btn.disabled = true;
 
-      const updates = allPosts.map(p => ({ id: p.id, date: p._slotDate }));
+  console.log('--- saving ---');
+  allPosts.forEach((p, i) => {
+    console.log(i, p.name, 'slotDate:', p._slotDate, 'date:', p.date);
+  });
 
-      try {
-        const res = await fetch('/api/notion', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'update-dates', updates })
-        });
-        if (!res.ok) throw new Error('failed');
-        allPosts.forEach(p => { p.date = p._slotDate; });
-        exitDesignMode();
-        renderPosts(allPosts);
-      } catch(e) {
-        alert('save failed — please try again');
-        exitDesignMode();
-      }
-    }
+  const updates = allPosts.map(p => ({ id: p.id, date: p._slotDate }));
+  console.log('updates:', JSON.stringify(updates));
+
+  try {
+    const res = await fetch('/api/notion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update-dates', updates })
+    });
+    if (!res.ok) throw new Error('failed');
+    allPosts.forEach(p => { p.date = p._slotDate; });
+    console.log('designMode before exit:', designMode);
+    exitDesignMode();
+    console.log('designMode after exit:', designMode);
+    renderPosts(allPosts);
+  } catch(e) {
+    console.log('error:', e);
+    alert('save failed — please try again');
+    exitDesignMode();
+  }
+}
 
     function updateSlide() {
       document.getElementById('lightbox-img').src = currentImgs[currentIdx];
