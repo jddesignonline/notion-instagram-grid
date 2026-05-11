@@ -28,16 +28,19 @@ export default async function handler(req) {
   const posts = data.results.map(page => {
     const props = page.properties;
     const files = props['attachment']?.files || [];
-    const attachmentUrl = files[0]?.file?.url || files[0]?.external?.url || null;
+    const allImgs = files.map(f => f.type === 'external' ? f.external?.url : f.file?.url).filter(Boolean);
+    const attachmentUrl = allImgs[0] || null;
     const linkUrl = props['link']?.url || props['link']?.rich_text?.[0]?.plain_text || null;
-    const canvaUrl = props['canva']?.url || props['canva link']?.rich_text?.[0]?.plain_text || null;
+    const canvaUrl = props['canva']?.url || props['canva']?.rich_text?.[0]?.plain_text || null;
     const imageSource = (props['source']?.select?.name || '').toLowerCase();
+    const format = (props['format']?.select?.name || '').toLowerCase();
 
     let img = null;
-    if (imageSource === 'notion') img = attachmentUrl;
-    else if (imageSource === 'link') img = linkUrl;
-    else if (imageSource === 'canva') img = canvaUrl;
-    else img = attachmentUrl || linkUrl || canvaUrl;
+    let imgs = [];
+    if (imageSource === 'notion') { img = attachmentUrl; imgs = allImgs; }
+    else if (imageSource === 'link') { img = linkUrl; imgs = linkUrl ? [linkUrl] : []; }
+    else if (imageSource === 'canva') { img = canvaUrl; imgs = canvaUrl ? [canvaUrl] : []; }
+    else { img = attachmentUrl || linkUrl || canvaUrl; imgs = allImgs.length ? allImgs : [img].filter(Boolean); }
 
     return {
       id: page.id,
@@ -46,7 +49,9 @@ export default async function handler(req) {
       pinned: props['pinned']?.checkbox === true,
       widget: props['widget']?.checkbox === true,
       imageSource,
-      img
+      format,
+      img,
+      imgs
     };
   })
   .filter(p => p.widget === true)
