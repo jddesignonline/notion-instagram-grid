@@ -13,7 +13,6 @@ export default async function handler(req) {
 
   const body = await req.json().catch(() => ({}));
 
-  // update dates
   if (body.action === 'update-dates') {
     const updates = body.updates || [];
     await Promise.all(updates.map(({ id, date }) =>
@@ -34,7 +33,6 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers });
   }
 
-  // default: query
   const res = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
     method: 'POST',
     headers: {
@@ -55,18 +53,11 @@ export default async function handler(req) {
     const props = page.properties;
     const files = props['attachment']?.files || [];
     const allImgs = files.map(f => f.type === 'external' ? f.external?.url : f.file?.url).filter(Boolean);
-    const attachmentUrl = allImgs[0] || null;
     const linkUrl = props['link']?.url || props['link']?.rich_text?.[0]?.plain_text || null;
-    const canvaUrl = props['canva']?.url || props['canva']?.rich_text?.[0]?.plain_text || null;
-    const imageSource = (props['source']?.select?.name || '').toLowerCase();
     const format = (props['format']?.select?.name || '').toLowerCase();
 
-    let img = null;
-    let imgs = [];
-    if (imageSource === 'notion') { img = attachmentUrl; imgs = allImgs; }
-    else if (imageSource === 'link') { img = linkUrl; imgs = linkUrl ? [linkUrl] : []; }
-    else if (imageSource === 'canva') { img = canvaUrl; imgs = canvaUrl ? [canvaUrl] : []; }
-    else { img = attachmentUrl || linkUrl || canvaUrl; imgs = allImgs.length ? allImgs : [img].filter(Boolean); }
+    const img = allImgs[0] || linkUrl || null;
+    const imgs = allImgs.length ? allImgs : (linkUrl ? [linkUrl] : []);
 
     return {
       id: page.id,
@@ -74,7 +65,6 @@ export default async function handler(req) {
       date: props['publish date']?.date?.start || null,
       pinned: props['pinned']?.checkbox === true,
       widget: props['widget']?.checkbox === true,
-      imageSource,
       format,
       img,
       imgs
