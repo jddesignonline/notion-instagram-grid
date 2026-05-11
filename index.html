@@ -78,8 +78,9 @@ function formatDate(d) {
 
 function canvaEmbedUrl(url) {
   if (!url) return '';
-  if (url.includes('?embed')) return url;
-  return url.replace(/\?.*$/, '') + '?embed';
+  url = url.replace('/view', '/watch');
+  if (!url.includes('?embed')) url = url.replace(/\?.*$/, '') + '?embed';
+  return url;
 }
 
 function pinSVG() {
