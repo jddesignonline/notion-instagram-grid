@@ -7,10 +7,11 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #fff; font-family: sans-serif; }
-    .toolbar { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .toolbar { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
     .refresh-btn { font-size: 16px; padding: 10px 26px; border-radius: 999px; border: none; background: #b573ff; color: #fff; cursor: pointer; letter-spacing: 0.02em; }
     .refresh-btn:hover { opacity: 0.85; }
-    .credit { font-size: 14px; color: #999; }
+    .credit-btn { font-size: 16px; padding: 10px 26px; border-radius: 999px; border: none; background: #1a1816; color: #fff; cursor: pointer; letter-spacing: 0.02em; text-decoration: none; display: inline-block; }
+    .credit-btn:hover { opacity: 0.85; }
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
     .cell { aspect-ratio: 3 / 4; background: #f0f0f0; overflow: hidden; cursor: pointer; position: relative; }
     .cell img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
@@ -26,7 +27,7 @@
 <body>
   <div class="toolbar">
     <button class="refresh-btn" id="btn" onclick="loadGrid()">refresh</button>
-    <span class="credit">widget by jddesignonline</span>
+    <a class="credit-btn" href="https://www.etsy.com/shop/jddesignonline" target="_blank">widget by jddesignonline</a>
   </div>
   <div class="grid" id="grid"><div class="loading">loading...</div></div>
   <script>
@@ -57,7 +58,7 @@
 
         const nameEl = document.createElement('div');
         nameEl.className = 'label-name';
-        nameEl.textContent = p.content;
+        nameEl.textContent = p.name;
         cell.appendChild(nameEl);
 
         grid.appendChild(cell);
@@ -72,7 +73,7 @@
       fetch('/api/notion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
         .then(r => r.json())
         .then(data => {
-          btn.innerHTML = 'refresh';
+          btn.textContent = 'refresh';
           btn.disabled = false;
           if (data.error) {
             document.getElementById('grid').innerHTML = '<div class="error">' + data.error + ' (' + data.code + ')</div>';
@@ -81,7 +82,7 @@
           renderPosts(data.posts);
         })
         .catch(e => {
-          btn.innerHTML = 'refresh';
+          btn.textContent = 'refresh';
           btn.disabled = false;
           document.getElementById('grid').innerHTML = '<div class="error">' + e.message + '</div>';
         });
